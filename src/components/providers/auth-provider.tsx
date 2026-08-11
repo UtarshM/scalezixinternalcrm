@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { usePathname } from 'next/navigation'
 import type { User } from '@/types'
 
 interface AuthContextType {
@@ -19,9 +20,23 @@ const AuthContext = createContext<AuthContextType>({
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const pathname = usePathname()
   const supabase = createClient()
 
   useEffect(() => {
+    // 1. Immediately check if URL contains password recovery tokens
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash || ''
+      const search = window.location.search || ''
+      if (
+        (hash.includes('type=recovery') || search.includes('type=recovery')) &&
+        !pathname?.startsWith('/reset-password')
+      ) {
+        window.location.href = `/reset-password${hash || search}`
+        return
+      }
+    }
+
     const getUser = async () => {
       try {
         const { data: { user: authUser } } = await supabase.auth.getUser()
@@ -44,6 +59,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (event === 'PASSWORD_RECOVERY') {
+          if (!pathname?.startsWith('/reset-password')) {
+            window.location.href = '/reset-password'
+          }
+          return
+        }
+
         if (event === 'SIGNED_IN' && session?.user) {
           const { data: profile } = await supabase
             .from('users')
@@ -61,7 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       subscription.unsubscribe()
     }
-  }, [supabase])
+  }, [supabase, pathname])
 
   const signOut = async () => {
     await supabase.auth.signOut()
