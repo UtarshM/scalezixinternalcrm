@@ -28,7 +28,7 @@ function ForgotPasswordForm() {
     setLoading(true)
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${getAppUrl()}/auth/callback?next=/reset-password`,
+        redirectTo: `${getAppUrl()}/reset-password`,
       })
       if (error) throw error
       setSent(true)
