@@ -43,9 +43,16 @@ export async function updateSession(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser()
 
-    // Define public routes that don't require authentication
-    const publicRoutes = ['/login', '/signup', '/forgot-password', '/auth/callback']
+    // Routes that don't require an active session
+    const publicRoutes = ['/login', '/signup', '/forgot-password', '/reset-password', '/auth/callback']
     const isPublicRoute = publicRoutes.some(route =>
+      request.nextUrl.pathname.startsWith(route)
+    )
+
+    // Auth entry pages where already-authenticated users should be redirected to /dashboard
+    // NOTE: /auth/callback (API endpoint) and /reset-password (password update) must NOT redirect to /dashboard
+    const authPagesToRedirect = ['/login', '/signup', '/forgot-password']
+    const isAuthPage = authPagesToRedirect.some(route =>
       request.nextUrl.pathname.startsWith(route)
     )
 
@@ -56,8 +63,8 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url)
     }
 
-    // Redirect authenticated users away from auth pages
-    if (user && isPublicRoute) {
+    // Redirect authenticated users away from login/signup/forgot-password pages
+    if (user && isAuthPage) {
       const url = request.nextUrl.clone()
       url.pathname = '/dashboard'
       return NextResponse.redirect(url)

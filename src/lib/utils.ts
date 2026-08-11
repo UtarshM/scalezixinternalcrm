@@ -143,10 +143,13 @@ export function getPriorityColor(priority: string): string {
 }
 
 export function getAppUrl(): string {
+  if (typeof window !== 'undefined' && window.location.origin) {
+    return window.location.origin.replace(/\/$/, '')
+  }
+
   let url =
     process.env.NEXT_PUBLIC_APP_URL ||
     process.env.NEXT_PUBLIC_VERCEL_URL ||
-    (typeof window !== 'undefined' ? window.location.origin : '') ||
     'https://scrm.scalezix.com'
 
   url = url.includes('http') ? url : `https://${url}`

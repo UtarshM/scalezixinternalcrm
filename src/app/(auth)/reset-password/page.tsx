@@ -47,8 +47,12 @@ export default function ResetPasswordPage() {
         router.refresh()
       }, 2000)
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to reset password'
-      toast.error(message)
+      const rawMessage = error instanceof Error ? error.message : 'Failed to reset password'
+      let friendlyMessage = rawMessage
+      if (rawMessage.toLowerCase().includes('session') || rawMessage.toLowerCase().includes('auth')) {
+        friendlyMessage = 'Your reset link is invalid or has expired. Please request a new one.'
+      }
+      toast.error(friendlyMessage)
     } finally {
       setLoading(false)
     }
