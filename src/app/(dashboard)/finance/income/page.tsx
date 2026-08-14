@@ -37,6 +37,7 @@ export default function IncomePage() {
   // Form states
   const [date, setDate] = React.useState('')
   const [amount, setAmount] = React.useState('')
+  const [gstRate, setGstRate] = React.useState('18') // default 18% GST
   const [gstAmount, setGstAmount] = React.useState('0')
   const [clientId, setClientId] = React.useState('')
   const [projectId, setProjectId] = React.useState('')
@@ -46,6 +47,28 @@ export default function IncomePage() {
   const [receivedInAccount, setReceivedInAccount] = React.useState('')
   const [refNumber, setRefNumber] = React.useState('')
   const [notes, setNotes] = React.useState('')
+
+  // Handle Base Amount or GST Rate changes
+  const handleAmountChange = (newBaseAmt: string, newRate: string = gstRate) => {
+    setAmount(newBaseAmt)
+    const base = parseFloat(newBaseAmt || '0')
+    if (newRate !== 'custom' && !isNaN(base)) {
+      const rateNum = parseFloat(newRate)
+      const calculatedGst = (base * rateNum) / 100
+      setGstAmount(calculatedGst ? calculatedGst.toFixed(2) : '0')
+    }
+  }
+
+  const handleGstRateChange = (newRate: string) => {
+    setGstRate(newRate)
+    const base = parseFloat(amount || '0')
+    if (newRate !== 'custom' && !isNaN(base)) {
+      const rateNum = parseFloat(newRate)
+      const calculatedGst = (base * rateNum) / 100
+      setGstAmount(calculatedGst ? calculatedGst.toFixed(2) : '0')
+    }
+  }
+
 
   const fetchIncomeData = React.useCallback(async () => {
     setLoading(true)
@@ -260,37 +283,58 @@ export default function IncomePage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-[var(--muted-foreground)]">Base Amount (₹)</label>
+              <div className="grid grid-cols-4 gap-3">
+                <div className="space-y-1 col-span-1">
+                  <label className="text-xs font-semibold text-[var(--muted-foreground)]">Base Amt (₹) *</label>
                   <input
                     type="number"
                     step="0.01"
                     required
-                    placeholder="80000"
+                    placeholder="180000"
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
+                    onChange={(e) => handleAmountChange(e.target.value)}
                     className="w-full text-sm p-2 bg-[var(--secondary)] border border-[var(--border)] rounded-lg text-[var(--foreground)] focus:outline-none"
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-[var(--muted-foreground)]">GST Amount (₹)</label>
+
+                <div className="space-y-1 col-span-1">
+                  <label className="text-xs font-semibold text-[var(--muted-foreground)]">GST Rate</label>
+                  <select
+                    value={gstRate}
+                    onChange={(e) => handleGstRateChange(e.target.value)}
+                    className="w-full text-sm p-2 bg-[var(--secondary)] border border-[var(--border)] rounded-lg text-[var(--foreground)] focus:outline-none"
+                  >
+                    <option value="18">18% GST</option>
+                    <option value="12">12% GST</option>
+                    <option value="5">5% GST</option>
+                    <option value="0">0% (Exempt)</option>
+                    <option value="custom">Custom Amt</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1 col-span-1">
+                  <label className="text-xs font-semibold text-[var(--muted-foreground)]">GST Amt (₹)</label>
                   <input
                     type="number"
                     step="0.01"
-                    placeholder="14400"
+                    placeholder="32400"
                     value={gstAmount}
-                    onChange={(e) => setGstAmount(e.target.value)}
+                    onChange={(e) => {
+                      setGstAmount(e.target.value)
+                      setGstRate('custom')
+                    }}
                     className="w-full text-sm p-2 bg-[var(--secondary)] border border-[var(--border)] rounded-lg text-[var(--foreground)] focus:outline-none"
                   />
                 </div>
-                <div className="space-y-1">
+
+                <div className="space-y-1 col-span-1">
                   <label className="text-xs font-semibold text-[var(--muted-foreground)]">Total Received</label>
-                  <div className="w-full text-sm p-2 bg-[var(--secondary)] border border-[var(--border)] rounded-lg text-[var(--muted-foreground)] select-none">
+                  <div className="w-full text-sm p-2 bg-[var(--secondary)] border border-[var(--border)] rounded-lg text-[var(--foreground)] font-bold select-none">
                     ₹{(parseFloat(amount || '0') + parseFloat(gstAmount || '0')).toLocaleString('en-IN')}
                   </div>
                 </div>
               </div>
+
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
