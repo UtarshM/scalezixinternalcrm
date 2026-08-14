@@ -586,6 +586,23 @@ export interface LeaveRequest {
   employee?: Employee
 }
 
+export interface AttendanceRecord {
+  id: string
+  employee_id: string | null
+  user_id: string
+  date: string
+  check_in: string | null
+  check_out: string | null
+  status: 'present' | 'absent' | 'late' | 'half_day' | 'on_leave' | 'remote'
+  notes: string | null
+  total_hours: number | null
+  created_at: string
+  updated_at: string
+  user?: User
+  employee?: Employee
+}
+
+
 export interface Activity {
   id: string
   user_id: string | null

@@ -3,7 +3,7 @@
 import * as React from 'react'
 import Link from 'next/link'
 import { getEmployees, getLeaveRequests } from '@/actions/hr'
-import { Users, CalendarRange, Landmark, ShieldCheck, ArrowRight } from 'lucide-react'
+import { Users, CalendarRange, Landmark, Clock, ArrowRight } from 'lucide-react'
 
 export default function HROverviewPage() {
   const [employees, setEmployees] = React.useState<any[]>([])
@@ -33,11 +33,11 @@ export default function HROverviewPage() {
     <div className="space-y-6 animate-fade-in">
       <div>
         <h1 className="text-2xl font-bold text-[var(--foreground)]">Human Resources</h1>
-        <p className="text-sm text-[var(--muted-foreground)]">Manage internal team profiles, check leave applications, and view salaries payrolls</p>
+        <p className="text-sm text-[var(--muted-foreground)]">Manage internal team profiles, check leave applications, view attendance, and manage salaries payrolls</p>
       </div>
 
       {/* Directory options Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6 flex flex-col justify-between card-hover">
           <div className="space-y-3">
             <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500">
@@ -51,6 +51,25 @@ export default function HROverviewPage() {
           <div className="mt-6 pt-4 border-t border-[var(--border)] flex justify-between items-center text-xs">
             <span className="text-[var(--muted-foreground)]">Active Staff: {employees.length}</span>
             <Link href="/hr/employees" className="flex items-center gap-1 text-[var(--accent)] font-semibold hover:underline">
+              Enter
+              <ArrowRight size={14} />
+            </Link>
+          </div>
+        </div>
+
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6 flex flex-col justify-between card-hover">
+          <div className="space-y-3">
+            <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+              <Clock size={20} />
+            </div>
+            <h3 className="font-bold text-[var(--foreground)] text-lg">Attendance</h3>
+            <p className="text-xs text-[var(--muted-foreground)] leading-relaxed">
+              Track daily clock-ins, clock-outs, working hours, and view team attendance logs.
+            </p>
+          </div>
+          <div className="mt-6 pt-4 border-t border-[var(--border)] flex justify-between items-center text-xs">
+            <span className="text-[var(--muted-foreground)]">Daily Time Log</span>
+            <Link href="/hr/attendance" className="flex items-center gap-1 text-[var(--accent)] font-semibold hover:underline">
               Enter
               <ArrowRight size={14} />
             </Link>
@@ -96,5 +115,6 @@ export default function HROverviewPage() {
         </div>
       </div>
     </div>
+
   )
 }
