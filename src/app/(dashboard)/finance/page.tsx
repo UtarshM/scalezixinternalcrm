@@ -72,21 +72,59 @@ export default function FinanceOverviewPage() {
   }
 
   // Calculations
+  // Helper to extract invoice payment amounts
+  const invoiceRevenue = React.useMemo(() => {
+    // Collect amount_paid from invoices that aren't already linked to payments
+    const paymentInvoiceIds = new Set(payments.map(p => p.invoice_id).filter(Boolean))
+    return invoices
+      .filter(inv => inv.amount_paid > 0 && !paymentInvoiceIds.has(inv.id))
+      .reduce((sum, inv) => sum + Number(inv.amount_paid || 0), 0)
+  }, [invoices, payments])
+
+  // Helper to get total payment inflow
+  const paymentInflow = React.useMemo(() => {
+    return payments.reduce((sum, p) => sum + Number(p.total_amount_received || (p.amount || 0) + (p.gst_amount || 0)), 0)
+  }, [payments])
+
   // 1. Revenue
-  const todayRevenue = payments.filter(p => p.payment_date && isToday(p.payment_date)).reduce((sum, p) => sum + (p.amount || 0), 0)
-  const monthlyRevenue = payments.filter(p => p.payment_date && isThisMonth(p.payment_date)).reduce((sum, p) => sum + (p.amount || 0), 0)
-  const yearlyRevenue = payments.filter(p => p.payment_date && isThisYear(p.payment_date)).reduce((sum, p) => sum + (p.amount || 0), 0)
-  const totalRevenue = payments.reduce((sum, p) => sum + (p.amount || 0), 0)
+  const totalRevenue = paymentInflow + invoiceRevenue
+
+  const todayRevenue = payments
+    .filter(p => p.payment_date && isToday(p.payment_date))
+    .reduce((sum, p) => sum + Number(p.total_amount_received || (p.amount || 0) + (p.gst_amount || 0)), 0)
+
+  const monthlyRevenue = payments
+    .filter(p => p.payment_date && isThisMonth(p.payment_date))
+    .reduce((sum, p) => sum + Number(p.total_amount_received || (p.amount || 0) + (p.gst_amount || 0)), 0) +
+    invoices
+      .filter(inv => inv.created_at && isThisMonth(inv.created_at) && inv.amount_paid > 0)
+      .reduce((sum, inv) => sum + Number(inv.amount_paid || 0), 0)
+
+  const yearlyRevenue = payments
+    .filter(p => p.payment_date && isThisYear(p.payment_date))
+    .reduce((sum, p) => sum + Number(p.total_amount_received || (p.amount || 0) + (p.gst_amount || 0)), 0) +
+    invoices
+      .filter(inv => inv.created_at && isThisYear(inv.created_at) && inv.amount_paid > 0)
+      .reduce((sum, inv) => sum + Number(inv.amount_paid || 0), 0)
 
   // 2. Expenses
-  const todayExpenses = expenses.filter(e => e.date && isToday(e.date)).reduce((sum, e) => sum + (e.amount || 0), 0)
-  const monthlyExpenses = expenses.filter(e => e.date && isThisMonth(e.date)).reduce((sum, e) => sum + (e.amount || 0), 0)
-  const yearlyExpenses = expenses.filter(e => e.date && isThisYear(e.date)).reduce((sum, e) => sum + (e.amount || 0), 0)
-  const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0)
+  const todayExpenses = expenses
+    .filter(e => e.date && isToday(e.date))
+    .reduce((sum, e) => sum + Number(e.total_amount || (e.amount || 0) + (e.gst_amount || 0)), 0)
+
+  const monthlyExpenses = expenses
+    .filter(e => e.date && isThisMonth(e.date))
+    .reduce((sum, e) => sum + Number(e.total_amount || (e.amount || 0) + (e.gst_amount || 0)), 0)
+
+  const yearlyExpenses = expenses
+    .filter(e => e.date && isThisYear(e.date))
+    .reduce((sum, e) => sum + Number(e.total_amount || (e.amount || 0) + (e.gst_amount || 0)), 0)
+
+  const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.total_amount || (e.amount || 0) + (e.gst_amount || 0)), 0)
 
   // 3. Profitability
   const grossProfit = totalRevenue - totalExpenses
-  const totalWithdrawals = withdrawals.reduce((sum, w) => sum + (w.amount || 0), 0)
+  const totalWithdrawals = withdrawals.reduce((sum, w) => sum + Number(w.amount || 0), 0)
   const netProfit = grossProfit - totalWithdrawals
   const profitMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0
   const monthlyProfit = monthlyRevenue - monthlyExpenses
@@ -94,12 +132,21 @@ export default function FinanceOverviewPage() {
   // 4. Cash Flow
   const cashInflow = totalRevenue
   const cashOutflow = totalExpenses + totalWithdrawals
-  const availableCash = bankAccounts.reduce((sum, b) => sum + (b.current_balance || 0), 0)
+  const bankAccountsBalance = bankAccounts.reduce((sum, b) => sum + Number(b.current_balance || 0), 0)
+  const availableCash = bankAccountsBalance > 0 ? bankAccountsBalance : Math.max(0, cashInflow - cashOutflow)
 
-  // 5. Pending Payments
-  const clientPending = invoices.filter(inv => ['sent', 'overdue'].includes(inv.status)).reduce((sum, inv) => sum + (inv.total - inv.amount_paid), 0)
-  const vendorPending = expenses.filter(e => e.status === 'pending' && e.category === 'vendor').reduce((sum, e) => sum + (e.amount || 0), 0)
-  const salaryDue = expenses.filter(e => e.status === 'pending' && e.category === 'salary').reduce((sum, e) => sum + (e.amount || 0), 0)
+  // 5. Pending Payments Liabilities & Client Receivables
+  const clientPending = invoices
+    .filter(inv => inv.status !== 'paid' && inv.status !== 'cancelled')
+    .reduce((sum, inv) => sum + Math.max(0, Number(inv.total || 0) - Number(inv.amount_paid || 0)), 0)
+
+  const vendorPending = expenses
+    .filter(e => e.status === 'pending' && (e.category === 'vendor' || e.vendor_id))
+    .reduce((sum, e) => sum + Number(e.total_amount || e.amount || 0), 0)
+
+  const salaryDue = expenses
+    .filter(e => e.status === 'pending' && e.category === 'salary')
+    .reduce((sum, e) => sum + Number(e.total_amount || e.amount || 0), 0)
 
   const thirtyDaysFromNow = new Date()
   thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30)
@@ -110,10 +157,10 @@ export default function FinanceOverviewPage() {
   }).length
 
   // 6. Subscriptions
-  const monthlySaaS = subscriptions.filter(s => s.category === 'software').reduce((sum, s) => sum + (s.monthly_cost || 0), 0)
-  const hostingCosts = subscriptions.filter(s => s.category === 'hosting').reduce((sum, s) => sum + (s.monthly_cost || 0), 0)
-  const marketingCosts = subscriptions.filter(s => s.category === 'marketing').reduce((sum, s) => sum + (s.monthly_cost || 0), 0)
-  const officeCosts = subscriptions.filter(s => s.category === 'office').reduce((sum, s) => sum + (s.monthly_cost || 0), 0)
+  const monthlySaaS = subscriptions.filter(s => s.category === 'software').reduce((sum, s) => sum + Number(s.monthly_cost || 0), 0)
+  const hostingCosts = subscriptions.filter(s => s.category === 'hosting').reduce((sum, s) => sum + Number(s.monthly_cost || 0), 0)
+  const marketingCosts = subscriptions.filter(s => s.category === 'marketing').reduce((sum, s) => sum + Number(s.monthly_cost || 0), 0)
+  const officeCosts = subscriptions.filter(s => s.category === 'office').reduce((sum, s) => sum + Number(s.monthly_cost || 0), 0)
 
   // Recharts trends data
   const monthlyData = React.useMemo(() => {
@@ -122,10 +169,14 @@ export default function FinanceOverviewPage() {
     return months.map((m, idx) => {
       const rev = payments
         .filter(p => p.payment_date && new Date(p.payment_date).getMonth() === idx && new Date(p.payment_date).getFullYear() === year)
-        .reduce((sum, p) => sum + (p.amount || 0), 0)
+        .reduce((sum, p) => sum + Number(p.total_amount_received || (p.amount || 0) + (p.gst_amount || 0)), 0) +
+        invoices
+          .filter(inv => inv.created_at && new Date(inv.created_at).getMonth() === idx && new Date(inv.created_at).getFullYear() === year && inv.amount_paid > 0)
+          .reduce((sum, inv) => sum + Number(inv.amount_paid || 0), 0)
+
       const exp = expenses
         .filter(e => e.date && new Date(e.date).getMonth() === idx && new Date(e.date).getFullYear() === year)
-        .reduce((sum, e) => sum + (e.amount || 0), 0)
+        .reduce((sum, e) => sum + Number(e.total_amount || (e.amount || 0) + (e.gst_amount || 0)), 0)
       return {
         month: m,
         Revenue: rev,
@@ -133,14 +184,14 @@ export default function FinanceOverviewPage() {
         Profit: rev - exp
       }
     })
-  }, [payments, expenses])
+  }, [payments, expenses, invoices])
 
   // Category breakdown for expenses
   const expenseCategories = React.useMemo(() => {
     const map: Record<string, number> = {}
     expenses.forEach(exp => {
       const cat = exp.category || 'other'
-      map[cat] = (map[cat] || 0) + exp.amount
+      map[cat] = (map[cat] || 0) + Number(exp.total_amount || exp.amount || 0)
     })
     const COLORS = ['#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#14b8a6', '#f43f5e']
     return Object.keys(map).map((cat, idx) => ({
@@ -149,6 +200,7 @@ export default function FinanceOverviewPage() {
       color: COLORS[idx % COLORS.length],
     }))
   }, [expenses])
+
 
   if (loading) return <div className="py-20 text-center text-sm text-[var(--muted-foreground)]">Loading finance records...</div>
 

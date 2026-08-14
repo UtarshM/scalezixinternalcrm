@@ -6,44 +6,77 @@ import { getExpenses } from '@/actions/expenses'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { ShieldAlert, RefreshCw, FileText, ArrowUpCircle, ArrowDownCircle, Info } from 'lucide-react'
 
+import { createClient } from '@/lib/supabase/client'
+
 export default function GstTaxesPage() {
+  const supabase = createClient()
   const [payments, setPayments] = React.useState<any[]>([])
   const [expenses, setExpenses] = React.useState<any[]>([])
+  const [invoices, setInvoices] = React.useState<any[]>([])
   const [loading, setLoading] = React.useState(true)
 
   const fetchGstData = React.useCallback(async () => {
     setLoading(true)
     try {
-      const [payData, expData] = await Promise.all([
+      const [payData, expData, invRes] = await Promise.all([
         getPayments(),
-        getExpenses()
+        getExpenses(),
+        supabase.from('invoices').select('*, client:clients(*)')
       ])
       setPayments(payData || [])
       setExpenses(expData || [])
+      setInvoices(invRes.data || [])
     } catch (e) {
       console.error(e)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [supabase])
 
   React.useEffect(() => {
     fetchGstData()
   }, [fetchGstData])
 
   // Calculations
-  const gstCollected = payments.reduce((sum, p) => sum + (p.gst_amount || 0), 0)
-  const gstPaid = expenses.reduce((sum, e) => sum + (e.gst_amount || 0), 0)
+  const gstFromPayments = payments.reduce((sum, p) => sum + Number(p.gst_amount || 0), 0)
+  const gstFromInvoices = invoices.reduce((sum, inv) => sum + Number(inv.tax_amount || 0), 0)
+  const gstCollected = gstFromPayments + gstFromInvoices
+  const gstPaid = expenses.reduce((sum, e) => sum + Number(e.gst_amount || 0), 0)
   const netGstPayable = gstCollected - gstPaid
 
   // Filter only transactions having GST details
   const gstInflows = React.useMemo(() => {
-    return payments.filter(p => (p.gst_amount || 0) > 0)
-  }, [payments])
+    const list: any[] = []
+    payments.filter(p => Number(p.gst_amount || 0) > 0).forEach(p => {
+      list.push({
+        id: p.id,
+        date: p.payment_date || p.created_at,
+        clientName: p.client?.company_name || 'Direct Revenue',
+        invoiceNumber: p.invoice_number || 'N/A',
+        taxableValue: Number(p.amount || 0),
+        gstAmount: Number(p.gst_amount || 0),
+        totalAmount: Number(p.total_amount_received || p.amount || 0)
+      })
+    })
+
+    invoices.filter(inv => Number(inv.tax_amount || 0) > 0).forEach(inv => {
+      list.push({
+        id: inv.id,
+        date: inv.issue_date || inv.created_at,
+        clientName: inv.client?.company_name || 'Direct Client',
+        invoiceNumber: inv.invoice_number || 'N/A',
+        taxableValue: Number(inv.subtotal || 0),
+        gstAmount: Number(inv.tax_amount || 0),
+        totalAmount: Number(inv.total || 0)
+      })
+    })
+    return list
+  }, [payments, invoices])
 
   const gstOutflows = React.useMemo(() => {
-    return expenses.filter(e => (e.gst_amount || 0) > 0)
+    return expenses.filter(e => Number(e.gst_amount || 0) > 0)
   }, [expenses])
+
 
   if (loading) return <div className="py-20 text-center text-sm text-[var(--muted-foreground)]">Loading GST ledgers...</div>
 
@@ -117,12 +150,12 @@ export default function GstTaxesPage() {
               <tbody className="divide-y divide-[var(--border)]">
                 {gstInflows.map(p => (
                   <tr key={p.id} className="hover:bg-[var(--secondary)]/30 transition-colors">
-                    <td className="p-3">{formatDate(p.payment_date || p.created_at)}</td>
-                    <td className="p-3 font-semibold">{p.client?.company_name || 'Direct Revenue'}</td>
-                    <td className="p-3">{p.invoice_number || 'N/A'}</td>
-                    <td className="p-3">{formatCurrency(p.amount)}</td>
-                    <td className="p-3 text-emerald-500 font-bold">{formatCurrency(p.gst_amount)}</td>
-                    <td className="p-3">{formatCurrency(p.total_amount_received || p.amount)}</td>
+                    <td className="p-3">{formatDate(p.date)}</td>
+                    <td className="p-3 font-semibold">{p.clientName}</td>
+                    <td className="p-3">{p.invoiceNumber}</td>
+                    <td className="p-3">{formatCurrency(p.taxableValue)}</td>
+                    <td className="p-3 text-emerald-500 font-bold">{formatCurrency(p.gstAmount)}</td>
+                    <td className="p-3">{formatCurrency(p.totalAmount)}</td>
                   </tr>
                 ))}
               </tbody>
