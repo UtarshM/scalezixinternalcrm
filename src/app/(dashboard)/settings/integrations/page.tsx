@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { Puzzle, ShieldAlert } from 'lucide-react'
 
+import { SettingsNav } from '@/components/layout/settings-nav'
+
 export default function IntegrationsSettingsPage() {
   const supabase = createClient()
 
@@ -42,13 +44,16 @@ export default function IntegrationsSettingsPage() {
   }
 
   return (
-    <div className="max-w-xl mx-auto space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in pb-12">
       <div>
         <h1 className="text-2xl font-bold text-[var(--foreground)]">API Integrations</h1>
-        <p className="text-sm text-[var(--muted-foreground)]">Manage external webhook connectors, AI models API stubs keys and third-party bindings</p>
+        <p className="text-sm text-[var(--muted-foreground)]">Manage external webhooks, AI model API keys, and third-party bindings.</p>
       </div>
 
-      <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6 shadow-sm space-y-6">
+      <SettingsNav />
+
+      <div className="max-w-2xl bg-[var(--card)] border border-[var(--border)] rounded-xl p-6 shadow-sm space-y-6">
+
         <div className="p-4 bg-[var(--secondary)] border border-[var(--border)] rounded-lg flex items-start gap-3 text-xs text-[var(--muted-foreground)] leading-relaxed">
           <Puzzle className="text-[var(--accent)] shrink-0 mt-0.5" size={16} />
           <div>

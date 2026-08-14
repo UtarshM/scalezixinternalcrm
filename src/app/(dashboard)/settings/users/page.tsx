@@ -6,6 +6,8 @@ import { useAuth } from '@/components/providers/auth-provider'
 import { toast } from 'sonner'
 import type { User } from '@/types'
 
+import { SettingsNav } from '@/components/layout/settings-nav'
+
 export default function UsersSettingsPage() {
   const supabase = createClient()
   const { user: currentUser } = useAuth()
@@ -69,11 +71,14 @@ export default function UsersSettingsPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in pb-12">
       <div>
         <h1 className="text-2xl font-bold text-[var(--foreground)]">User Management</h1>
-        <p className="text-sm text-[var(--muted-foreground)]">Manage CRM system roles, view email access, and toggle active logins</p>
+        <p className="text-sm text-[var(--muted-foreground)]">Manage CRM system roles, view email access, and toggle active logins.</p>
       </div>
+
+      <SettingsNav />
+
 
       {loading ? (
         <div className="py-20 text-center text-sm text-[var(--muted-foreground)]">Loading system users...</div>

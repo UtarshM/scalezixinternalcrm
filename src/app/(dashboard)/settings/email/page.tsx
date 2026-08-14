@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { ShieldAlert, Mail } from 'lucide-react'
 
+import { SettingsNav } from '@/components/layout/settings-nav'
+
 export default function EmailSettingsPage() {
   const supabase = createClient()
 
@@ -51,13 +53,16 @@ export default function EmailSettingsPage() {
   }
 
   return (
-    <div className="max-w-xl mx-auto space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in pb-12">
       <div>
         <h1 className="text-2xl font-bold text-[var(--foreground)]">Email SMTP Integrations</h1>
-        <p className="text-sm text-[var(--muted-foreground)]">Configure Gmail OAuth2 API parameters for secure system notifications and PDF invoices dispatch</p>
+        <p className="text-sm text-[var(--muted-foreground)]">Configure Gmail OAuth2 API parameters for secure system notifications and PDF invoices dispatch.</p>
       </div>
 
-      <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6 shadow-sm space-y-6">
+      <SettingsNav />
+
+      <div className="max-w-2xl bg-[var(--card)] border border-[var(--border)] rounded-xl p-6 shadow-sm space-y-6">
+
         <div className="p-4 bg-[var(--secondary)] border border-[var(--border)] rounded-lg flex items-start gap-3 text-xs text-[var(--muted-foreground)] leading-relaxed">
           <ShieldAlert className="text-amber-500 shrink-0 mt-0.5" size={16} />
           <div>

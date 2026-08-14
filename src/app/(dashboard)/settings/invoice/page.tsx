@@ -4,6 +4,8 @@ import * as React from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
+import { SettingsNav } from '@/components/layout/settings-nav'
+
 export default function InvoiceSettingsPage() {
   const supabase = createClient()
 
@@ -50,13 +52,16 @@ export default function InvoiceSettingsPage() {
   }
 
   return (
-    <div className="max-w-xl mx-auto space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in pb-12">
       <div>
-        <h1 className="text-2xl font-bold text-[var(--foreground)]">Invoice Settings</h1>
-        <p className="text-sm text-[var(--muted-foreground)]">Configure billing terms, default invoice prefixes, and payment cycles</p>
+        <h1 className="text-2xl font-bold text-[var(--foreground)]">Invoice & Billing Settings</h1>
+        <p className="text-sm text-[var(--muted-foreground)]">Configure billing terms, default invoice prefixes, and payment cycles.</p>
       </div>
 
-      <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6 shadow-sm">
+      <SettingsNav />
+
+      <div className="max-w-2xl bg-[var(--card)] border border-[var(--border)] rounded-xl p-6 shadow-sm">
+
         <form onSubmit={handleSave} className="space-y-4">
           <div className="grid grid-cols-3 gap-4">
             <div>

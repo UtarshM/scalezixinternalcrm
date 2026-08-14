@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import Image from 'next/image'
 
+import { SettingsNav } from '@/components/layout/settings-nav'
+
 export default function CompanySettingsPage() {
   const supabase = createClient()
 
@@ -51,13 +53,16 @@ export default function CompanySettingsPage() {
   }
 
   return (
-    <div className="max-w-xl mx-auto space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in pb-12">
       <div>
         <h1 className="text-2xl font-bold text-[var(--foreground)]">Company Branding</h1>
-        <p className="text-sm text-[var(--muted-foreground)]">Manage company branding details, logo previews, and Indian GST split calculations parameters</p>
+        <p className="text-sm text-[var(--muted-foreground)]">Manage company branding details, logo previews, and Indian GST split calculation parameters.</p>
       </div>
 
-      <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6 shadow-sm space-y-6">
+      <SettingsNav />
+
+      <div className="max-w-2xl bg-[var(--card)] border border-[var(--border)] rounded-xl p-6 shadow-sm space-y-6">
+
         {/* Logo preview */}
         <div className="flex items-center gap-4 border-b border-[var(--border)] pb-4">
           <Image src="/logo.png" alt="Logo" width={120} height={36} className="dark:invert" />
