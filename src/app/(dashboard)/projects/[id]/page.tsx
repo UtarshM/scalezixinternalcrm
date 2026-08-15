@@ -31,7 +31,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
-import type { Project, User, Credential, BillingRenewal, ProjectMember, Milestone } from '@/types'
+import type { Project, User, Client, Credential, BillingRenewal, ProjectMember, Milestone } from '@/types'
 
 const Github = (props: any) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -66,12 +66,20 @@ export default function ProjectDetailPage() {
 
   const [project, setProject] = React.useState<Project | null>(null)
   const [systemUsers, setSystemUsers] = React.useState<User[]>([])
+  const [clientsList, setClientsList] = React.useState<Client[]>([])
   const [loading, setLoading] = React.useState(true)
   const [activeTab, setActiveTab] = React.useState<ActiveTabType>('overview')
 
   // Overview edit state
   const [isEditingOverview, setIsEditingOverview] = React.useState(false)
   const [editName, setEditName] = React.useState('')
+  const [editProjectId, setEditProjectId] = React.useState('')
+  const [editClientId, setEditClientId] = React.useState('')
+  const [editManagerId, setEditManagerId] = React.useState('')
+  const [editPriority, setEditPriority] = React.useState('medium')
+  const [editStartDate, setEditStartDate] = React.useState('')
+  const [editDeadline, setEditDeadline] = React.useState('')
+  const [editStatus, setEditStatus] = React.useState('planning')
   const [editDesc, setEditDesc] = React.useState('')
   const [editCategory, setEditCategory] = React.useState('')
   const [editType, setEditType] = React.useState('')
@@ -181,6 +189,13 @@ export default function ProjectDetailPage() {
       if (data) {
         // Initialize Overview states
         setEditName(data.name || '')
+        setEditProjectId(data.project_id || '')
+        setEditClientId(data.client_id || '')
+        setEditManagerId(data.manager_id || '')
+        setEditPriority(data.priority || 'medium')
+        setEditStartDate(data.start_date || '')
+        setEditDeadline(data.deadline || '')
+        setEditStatus(data.status || 'planning')
         setEditDesc(data.description || '')
         setEditCategory(data.category || 'client_project')
         setEditType(data.project_type || 'website')
@@ -231,9 +246,13 @@ export default function ProjectDetailPage() {
         setDocImportant(doc?.important_instructions || '')
       }
 
-      // Fetch all system users to add to team
-      const { data: users } = await supabase.from('users').select('*')
+      // Fetch all system users and clients
+      const [{ data: users }, { data: clientsData }] = await Promise.all([
+        supabase.from('users').select('*').order('full_name', { ascending: true }),
+        supabase.from('clients').select('*').order('company_name', { ascending: true })
+      ])
       setSystemUsers(users || [])
+      setClientsList(clientsData || [])
     } catch (e) {
       console.error(e)
       toast.error('Failed to load project details')
@@ -262,13 +281,20 @@ export default function ProjectDetailPage() {
     try {
       await updateProjectRecord(id, {
         name: editName,
-        description: editDesc,
+        project_id: editProjectId,
+        client_id: editClientId || null,
+        manager_id: editManagerId || null,
         category: editCategory,
         project_type: editType,
+        status: editStatus,
+        priority: editPriority,
         budget: editBudget ? parseFloat(editBudget) : null,
-        progress: editProgress
+        start_date: editStartDate || null,
+        deadline: editDeadline || null,
+        progress: editProgress,
+        description: editDesc || null,
       })
-      toast.success('Project details updated')
+      toast.success('Project details updated successfully')
       setIsEditingOverview(false)
       fetchProjectAndUsers()
     } catch (err: any) {
@@ -768,30 +794,93 @@ export default function ProjectDetailPage() {
               <form onSubmit={handleOverviewSave} className="space-y-4 text-sm">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-[var(--muted-foreground)] mb-1">Project Name</label>
+                    <label className="block text-xs font-semibold text-[var(--muted-foreground)] mb-1">Project Name *</label>
                     <input
                       type="text"
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
                       required
-                      className="w-full px-3 py-2 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--foreground)] focus:outline-none"
+                      placeholder="e.g. Website Redesign"
+                      className="w-full px-3 py-2 bg-[var(--secondary)] border border-[var(--border)] rounded-lg text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-[var(--muted-foreground)] mb-1">Budget</label>
+                    <label className="block text-xs font-semibold text-[var(--muted-foreground)] mb-1">Project ID / Code *</label>
                     <input
-                      type="number"
-                      value={editBudget}
-                      onChange={(e) => setEditBudget(e.target.value)}
-                      className="w-full px-3 py-2 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--foreground)] focus:outline-none"
+                      type="text"
+                      value={editProjectId}
+                      onChange={(e) => setEditProjectId(e.target.value)}
+                      required
+                      placeholder="e.g. PRJ-001"
+                      className="w-full px-3 py-2 bg-[var(--secondary)] border border-[var(--border)] rounded-lg text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                     />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-[var(--muted-foreground)] mb-1">Client Company</label>
+                    <select
+                      value={editClientId}
+                      onChange={(e) => setEditClientId(e.target.value)}
+                      className="w-full px-3 py-2 bg-[var(--secondary)] border border-[var(--border)] rounded-lg text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                    >
+                      <option value="">No Client (Internal)</option>
+                      {clientsList.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.company_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-[var(--muted-foreground)] mb-1">Project Manager</label>
+                    <select
+                      value={editManagerId}
+                      onChange={(e) => setEditManagerId(e.target.value)}
+                      className="w-full px-3 py-2 bg-[var(--secondary)] border border-[var(--border)] rounded-lg text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                    >
+                      <option value="">Unassigned</option>
+                      {systemUsers.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.full_name || u.email} ({u.role})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-[var(--muted-foreground)] mb-1">Status</label>
+                    <select
+                      value={editStatus}
+                      onChange={(e) => setEditStatus(e.target.value)}
+                      className="w-full px-3 py-2 bg-[var(--secondary)] border border-[var(--border)] rounded-lg text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                    >
+                      <option value="planning">Planning</option>
+                      <option value="development">Development</option>
+                      <option value="testing">Testing</option>
+                      <option value="live">Live</option>
+                      <option value="maintenance">Maintenance</option>
+                      <option value="completed">Completed</option>
+                      <option value="on_hold">On Hold</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-[var(--muted-foreground)] mb-1">Priority</label>
+                    <select
+                      value={editPriority}
+                      onChange={(e) => setEditPriority(e.target.value)}
+                      className="w-full px-3 py-2 bg-[var(--secondary)] border border-[var(--border)] rounded-lg text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                    >
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                      <option value="urgent">Urgent</option>
+                    </select>
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-[var(--muted-foreground)] mb-1">Category</label>
                     <select
                       value={editCategory}
                       onChange={(e) => setEditCategory(e.target.value)}
-                      className="w-full px-3 py-2 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--foreground)] focus:outline-none"
+                      className="w-full px-3 py-2 bg-[var(--secondary)] border border-[var(--border)] rounded-lg text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                     >
                       <option value="client_project">Client Project</option>
                       <option value="internal_project">Internal Project</option>
@@ -804,7 +893,7 @@ export default function ProjectDetailPage() {
                     <select
                       value={editType}
                       onChange={(e) => setEditType(e.target.value)}
-                      className="w-full px-3 py-2 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--foreground)] focus:outline-none"
+                      className="w-full px-3 py-2 bg-[var(--secondary)] border border-[var(--border)] rounded-lg text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                     >
                       <option value="website">Website</option>
                       <option value="full_stack">Full Stack</option>
@@ -823,31 +912,70 @@ export default function ProjectDetailPage() {
                       <option value="custom">Custom</option>
                     </select>
                   </div>
-                  <div className="sm:col-span-2">
-                    <label className="block text-xs font-semibold text-[var(--muted-foreground)] mb-1">Progress ({editProgress}%)</label>
+                  <div>
+                    <label className="block text-xs font-semibold text-[var(--muted-foreground)] mb-1">Budget (INR)</label>
                     <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={editProgress}
-                      onChange={(e) => setEditProgress(parseInt(e.target.value))}
-                      className="w-full accent-[var(--accent)]"
+                      type="number"
+                      placeholder="e.g. 150000"
+                      value={editBudget}
+                      onChange={(e) => setEditBudget(e.target.value)}
+                      className="w-full px-3 py-2 bg-[var(--secondary)] border border-[var(--border)] rounded-lg text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-[var(--muted-foreground)] mb-1">Progress ({editProgress}%)</label>
+                    <div className="flex items-center gap-3 h-[38px]">
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={editProgress}
+                        onChange={(e) => setEditProgress(parseInt(e.target.value))}
+                        className="flex-1 accent-[var(--accent)] cursor-pointer"
+                      />
+                      <span className="text-xs font-bold text-[var(--foreground)] w-10 text-right">{editProgress}%</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-[var(--muted-foreground)] mb-1">Start Date</label>
+                    <input
+                      type="date"
+                      value={editStartDate}
+                      onChange={(e) => setEditStartDate(e.target.value)}
+                      className="w-full px-3 py-2 bg-[var(--secondary)] border border-[var(--border)] rounded-lg text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-[var(--muted-foreground)] mb-1">Target Deadline</label>
+                    <input
+                      type="date"
+                      value={editDeadline}
+                      onChange={(e) => setEditDeadline(e.target.value)}
+                      className="w-full px-3 py-2 bg-[var(--secondary)] border border-[var(--border)] rounded-lg text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                     />
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="block text-xs font-semibold text-[var(--muted-foreground)] mb-1">Description</label>
+                    <label className="block text-xs font-semibold text-[var(--muted-foreground)] mb-1">Scope / Description</label>
                     <textarea
                       value={editDesc}
                       onChange={(e) => setEditDesc(e.target.value)}
                       rows={3}
-                      className="w-full px-3 py-2 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--foreground)] focus:outline-none"
+                      placeholder="Outline project deliverables, requirements, and scope..."
+                      className="w-full px-3 py-2 bg-[var(--secondary)] border border-[var(--border)] rounded-lg text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                     />
                   </div>
                 </div>
-                <div className="flex justify-end gap-2 pt-2">
+                <div className="flex justify-end gap-2 pt-3 border-t border-[var(--border)]">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingOverview(false)}
+                    className="px-4 py-2 border border-[var(--border)] hover:bg-[var(--secondary)] text-[var(--foreground)] rounded-lg text-sm font-medium transition-all"
+                  >
+                    Cancel
+                  </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-[var(--accent)] hover:bg-[var(--accent)]/90 text-white rounded-lg font-semibold flex items-center gap-1.5"
+                    className="px-4 py-2 bg-[var(--accent)] hover:opacity-90 text-white rounded-lg font-semibold flex items-center gap-1.5 transition-all shadow-sm"
                   >
                     <Save size={16} /> Save Changes
                   </button>

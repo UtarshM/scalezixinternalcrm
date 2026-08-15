@@ -46,6 +46,11 @@ export async function createProjectRecord(formData: any) {
   if (error) throw error
 
   revalidatePath('/projects')
+  revalidatePath('/dashboard')
+  revalidatePath('/clients')
+  if (formData.client_id) {
+    revalidatePath(`/clients/${formData.client_id}`)
+  }
 }
 
 export async function updateProjectRecord(id: string, formData: any) {
@@ -56,6 +61,11 @@ export async function updateProjectRecord(id: string, formData: any) {
 
   revalidatePath('/projects')
   revalidatePath(`/projects/${id}`)
+  revalidatePath('/dashboard')
+  revalidatePath('/clients')
+  if (formData.client_id) {
+    revalidatePath(`/clients/${formData.client_id}`)
+  }
 }
 
 export async function deleteProjectRecord(id: string) {
@@ -65,6 +75,8 @@ export async function deleteProjectRecord(id: string) {
   if (error) throw error
 
   revalidatePath('/projects')
+  revalidatePath('/dashboard')
+  revalidatePath('/clients')
 }
 
 export async function addProjectMember(projectId: string, userId: string, role = 'member') {
